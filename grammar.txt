@@ -1,0 +1,28 @@
+expr       : KEYWORD:set IDENTIFIER ASSIGN expr
+           : comp-expr (comp-op comp-expr)*
+
+comp-expr  : KEYWORD:not comp-expr
+           : arith-expr ((EQ|NEQ|LT|LE|GT|GE) arith-expr)*
+
+arith-expr : term ((PLUS|MINUS) term)*
+
+term       : factor ((MUL|DIV|MOD) factor)*
+           : STRING
+
+factor     : (PLUS|MINUS)? power
+
+power      : atom (POW factor)*
+
+atom       : NONE|NUMBER|BOOL|STRING|IDENTIFIER
+           : LPAREN expr RPAREN
+           : if-expr
+           : for-expr
+           : while-expr
+
+if-expr    : KEYWORD:if expr KEYWORD:do expr
+             (KEYWORD:else expr)?
+
+for-expr   : KEYWORD:for IDENTIFIER ASSIGN expr KEYWORD:to expr
+             (KEYWORD:step expr)? KEYWORD:do expr
+
+while-expr : KEYWORD:while expr KEYWORD:do expr
