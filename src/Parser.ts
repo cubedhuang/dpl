@@ -47,10 +47,10 @@ export class Parser {
 	constructor(public tokens: Token[]) {}
 
 	parse() {
-		const result = this.expr();
+		const res = this.expr();
 
-		if (!result.error && this.current().type !== "EOF") {
-			return result.failure(
+		if (!res.error && this.current().type !== "EOF") {
+			return res.failure(
 				new SyntaxError(
 					this.current().posStart!,
 					this.current().posEnd!,
@@ -61,7 +61,7 @@ export class Parser {
 			);
 		}
 
-		return result;
+		return res;
 	}
 
 	next() {
@@ -142,16 +142,16 @@ export class Parser {
 	}
 
 	factor(): ParseResult {
-		const result = new ParseResult();
+		const res = new ParseResult();
 		const token = this.current();
 
 		if (["PLUS", "MINUS"].includes(token.type)) {
-			result.register(this.next());
+			res.register(this.next());
 
-			const power = result.register(this.power());
-			if (result.error) return result;
+			const power = res.register(this.power());
+			if (res.error) return res;
 
-			return result.success(new UnaryOpNode(token, power));
+			return res.success(new UnaryOpNode(token, power));
 		}
 
 		return this.power();
@@ -166,7 +166,7 @@ export class Parser {
 	}
 
 	atom() {
-		const result = new ParseResult();
+		const res = new ParseResult();
 		const token = this.current();
 
 		if (
@@ -175,27 +175,27 @@ export class Parser {
 			token.type === "BOOL" ||
 			token.type === "STRING"
 		) {
-			result.register(this.next());
+			res.register(this.next());
 
-			return result.success(new ValueNode(token));
+			return res.success(new ValueNode(token));
 		}
 
 		if (token.type === "IDENTIFIER") {
-			result.register(this.next());
-			return result.success(new VarAccessNode(token));
+			res.register(this.next());
+			return res.success(new VarAccessNode(token));
 		}
 
 		if (token.type === "LPAREN") {
-			result.register(this.next());
+			res.register(this.next());
 
-			const expr = result.register(this.expr());
-			if (result.error) return result;
+			const expr = res.register(this.expr());
+			if (res.error) return res;
 
 			if (this.current()?.type === "RPAREN") {
-				result.register(this.next());
-				return result.success(expr);
+				res.register(this.next());
+				return res.success(expr);
 			} else {
-				return result.failure(
+				return res.failure(
 					new SyntaxError(
 						this.current().posStart,
 						this.current().posEnd,
@@ -206,27 +206,27 @@ export class Parser {
 		}
 
 		if (token.matches("KEYWORD", "if")) {
-			const ifExpr = result.register(this.ifExpr());
-			if (result.error) return result;
+			const ifExpr = res.register(this.ifExpr());
+			if (res.error) return res;
 
-			return result.success(ifExpr);
+			return res.success(ifExpr);
 		}
 
 		if (token.matches("KEYWORD", "for")) {
-			const forExpr = result.register(this.forExpr());
-			if (result.error) return result;
+			const forExpr = res.register(this.forExpr());
+			if (res.error) return res;
 
-			return result.success(forExpr);
+			return res.success(forExpr);
 		}
 
 		if (token.matches("KEYWORD", "while")) {
-			const whileExpr = result.register(this.whileExpr());
-			if (result.error) return result;
+			const whileExpr = res.register(this.whileExpr());
+			if (res.error) return res;
 
-			return result.success(whileExpr);
+			return res.success(whileExpr);
 		}
 
-		return result.failure(
+		return res.failure(
 			new SyntaxError(
 				token.posStart,
 				token.posEnd,
@@ -407,21 +407,21 @@ export class Parser {
 		ops: TokenType[],
 		nodeB: () => ParseResult = nodeA
 	) {
-		const result = new ParseResult();
-		let left = result.register(nodeA());
+		const res = new ParseResult();
 
-		if (result.error) return result;
+		let left = res.register(nodeA());
+		if (res.error) return res;
 
 		while (ops.includes(this.current()?.type)) {
 			const op = this.current();
-			result.register(this.next());
+			res.register(this.next());
 
-			const right = result.register(nodeB());
-			if (result.error) return result;
+			const right = res.register(nodeB());
+			if (res.error) return res;
 
 			left = new BinaryOpNode(op, left, right);
 		}
 
-		return result.success(left);
+		return res.success(left);
 	}
 }

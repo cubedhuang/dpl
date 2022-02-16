@@ -60,10 +60,10 @@ const tokenMap: TokenMatcher[] = [
 	{ regex: /^xor\b/, type: "XOR" },
 	{ regex: /^not\b/, type: "NOT" },
 
-	{ regex: /^</, type: "LT" },
 	{ regex: /^<=/, type: "LE" },
-	{ regex: /^>/, type: "GT" },
+	{ regex: /^</, type: "LT" },
 	{ regex: /^>=/, type: "GE" },
+	{ regex: /^>/, type: "GT" },
 	{ regex: /^=/, type: "EQ" },
 	{ regex: /^!=/, type: "NEQ" },
 
