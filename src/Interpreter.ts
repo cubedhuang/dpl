@@ -186,11 +186,11 @@ export class Interpreter {
 		if (res.error) return res;
 		const endValue = res.register(this.visit(node.end, context));
 		if (res.error) return res;
-		const stepValue =
-			node.step ??
-			new DPLNumber(1)
-				.setPos(endValue.posStart, endValue.posEnd)
-				.setContext(context);
+		const stepValue = node.step
+			? res.register(this.visit(node.step, context))
+			: new DPLNumber(1)
+					.setPos(endValue.posStart, endValue.posEnd)
+					.setContext(context);
 
 		if (startValue.type !== "NUMBER") {
 			return res.failure(

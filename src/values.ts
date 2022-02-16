@@ -130,7 +130,7 @@ export class DPLNumber extends BaseDPLValue<"NUMBER", number> {
 
 	unaryOps = {
 		PLUS: () => this.copy(),
-		MINUS: () => new DPLNumber(-1),
+		MINUS: () => new DPLNumber(-this.value),
 		NOT: () => new DPLNumber(~this.value)
 	};
 
