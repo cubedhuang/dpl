@@ -1,3 +1,5 @@
+import chalk from "chalk";
+
 import { Context } from "./Context";
 import { Position } from "./Position";
 
@@ -46,10 +48,12 @@ export abstract class DPLError extends Error {
 	}
 
 	toString() {
-		let str = `${this.name}: ${this.message}`.red;
-		str += `\n  File ${this.posStart.file}, line ${
-			this.posStart.line + 1
-		}, column ${this.posStart.col + 1}`.dim;
+		let str = chalk.redBright(`${this.name}: ${this.message}`);
+		str += chalk.dim(
+			`\n  File ${this.posStart.file}, line ${
+				this.posStart.line + 1
+			}, column ${this.posStart.col + 1}`
+		);
 		str += `\n\n${addArrows(
 			this.posStart.input,
 			this.posStart,
@@ -82,8 +86,8 @@ export class RuntimeError extends DPLError {
 	}
 
 	toString() {
-		let str = `${this.name}: ${this.message}`.red;
-		str += this.generateTraceback().dim;
+		let str = chalk.redBright(`${this.name}: ${this.message}`);
+		str += chalk.dim(this.generateTraceback());
 		str += `\n${addArrows(
 			this.posStart.input,
 			this.posStart,

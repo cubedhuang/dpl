@@ -2,6 +2,8 @@ import { Context } from "./Context";
 import { RuntimeError } from "./errors";
 import {
 	BinaryOpNode,
+	CallNode,
+	FnDefNode,
 	ForNode,
 	IfNode,
 	Node,
@@ -11,7 +13,14 @@ import {
 	VarAssignNode,
 	WhileNode
 } from "./nodes";
-import { DPLBool, DPLNone, DPLNumber, DPLString, DPLValue } from "./values";
+import {
+	DPLBool,
+	DPLFunction,
+	DPLNone,
+	DPLNumber,
+	DPLString,
+	DPLValue
+} from "./values";
 
 class RuntimeResult<Type extends DPLValue> {
 	value!: Type;
@@ -52,6 +61,10 @@ export class Interpreter {
 				return this.visitForNode(node, context);
 			case "WhileNode":
 				return this.visitWhileNode(node, context);
+			case "FnDefNode":
+				return this.visitFnDefNode(node, context);
+			case "CallNode":
+				return this.visitCallNode(node, context);
 		}
 		// @ts-ignore
 		throw new Error(`Unknown node type ${node.type}`);
@@ -129,7 +142,9 @@ export class Interpreter {
 			);
 		}
 
-		return res.success(value.copy().setPos(node.posStart, node.posEnd));
+		return res.success(
+			value.copy().setPos(node.posStart, node.posEnd).setContext(context)
+		);
 	}
 
 	visitVarAssignNode(node: VarAssignNode, context: Context) {
@@ -269,5 +284,43 @@ export class Interpreter {
 		return res.success(
 			new DPLNone().setPos(node.posStart, node.posEnd).setContext(context)
 		);
+	}
+
+	visitFnDefNode(node: FnDefNode, context: Context) {
+		const res = new RuntimeResult();
+
+		const name = node.name?.value ?? null;
+
+		const fn = new DPLFunction(
+			name,
+			node.body,
+			node.params.map(param => param.value)
+		)
+			.setPos(node.posStart, node.posEnd)
+			.setContext(context);
+
+		if (name) context.symbolTable.set(name, fn);
+
+		return res.success(fn);
+	}
+
+	visitCallNode(node: CallNode, context: Context) {
+		const res = new RuntimeResult();
+
+		let fn = res.register(this.visit(node.fn, context));
+		if (res.error) return res;
+
+		fn = fn.copy().setPos(node.posStart, node.posEnd);
+
+		const args = [];
+
+		for (const arg of node.args) {
+			args.push(res.register(this.visit(arg, context)));
+			if (res.error) return res;
+		}
+
+		const [result, error] = fn.call(args);
+		if (error) return res.failure(error);
+		return res.success(result!);
 	}
 }

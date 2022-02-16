@@ -1,9 +1,12 @@
 import { Context } from "./Context";
 import { RuntimeError, UndefinedOpError } from "./errors";
+import { Interpreter } from "./Interpreter";
+import { Node } from "./nodes";
 import { Position } from "./Position";
+import { SymbolTable } from "./SymbolTable";
 import { TokenType } from "./Token";
 
-export type DPLValue = DPLNone | DPLNumber | DPLBool | DPLString;
+export type DPLValue = DPLNone | DPLNumber | DPLBool | DPLString | DPLFunction;
 export type DPLType = DPLValue["type"];
 
 type Ops<Args extends unknown[] = []> = {
@@ -62,6 +65,18 @@ export abstract class BaseDPLValue<
 		op: TokenType,
 		other: DPLValue
 	): [DPLValue, null] | [null, RuntimeError];
+
+	call(_args: DPLValue[]): [DPLValue, null] | [null, RuntimeError] {
+		return [
+			null,
+			new RuntimeError(
+				this.posStart!,
+				this.posEnd!,
+				`${this.type} is not callable`,
+				this.context!
+			)
+		];
+	}
 
 	abstract copy(): DPLValue;
 	abstract toString(): string;
@@ -440,5 +455,75 @@ export class DPLString extends BaseDPLValue<"STRING", string> {
 
 	render() {
 		return JSON.stringify(this.value);
+	}
+}
+
+export class DPLFunction extends BaseDPLValue<"FN", null> {
+	readonly interpreter = new Interpreter();
+
+	readonly name: string;
+
+	constructor(
+		name: string | null,
+		public readonly body: Node,
+		public readonly params: string[]
+	) {
+		super("FN", null);
+
+		this.name = name ?? "<anonymous>";
+	}
+
+	unaryOps = {};
+
+	binaryOp(
+		op: TokenType,
+		other: DPLValue
+	): [DPLValue, null] | [null, RuntimeError] {
+		return [
+			null,
+			new UndefinedOpError(
+				this.posStart!,
+				other.posEnd!,
+				`Undefined behavior for ${this.type} ${op} ${other.type}`,
+				this.context!
+			)
+		];
+	}
+
+	call(args: DPLValue[]): [DPLValue, null] | [null, RuntimeError] {
+		const context = new Context(this.name, this.context, this.posStart);
+		context.symbolTable = new SymbolTable(context.parent!.symbolTable);
+
+		if (args.length !== this.params.length) {
+			return [
+				null,
+				new RuntimeError(
+					this.posStart!,
+					this.posEnd!,
+					`Expected ${this.params.length} arguments but got ${args.length}`,
+					this.context!
+				)
+			];
+		}
+
+		for (let i = 0; i < args.length; i++) {
+			args[i].setContext(context);
+			context.symbolTable.set(this.params[i], args[i]);
+		}
+
+		const { value, error } = this.interpreter.visit(this.body, context);
+
+		if (error) return [null, error];
+		return [value, null];
+	}
+
+	copy(): DPLFunction {
+		return new DPLFunction(this.name, this.body, this.params)
+			.setPos(this.posStart, this.posEnd)
+			.setContext(this.context);
+	}
+
+	toString() {
+		return `<function ${this.name}>`;
 	}
 }

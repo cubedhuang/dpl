@@ -1,6 +1,8 @@
 import { DPLError, SyntaxError } from "./errors";
 import {
 	BinaryOpNode,
+	CallNode,
+	FnDefNode,
 	ForNode,
 	IfNode,
 	Node,
@@ -159,10 +161,48 @@ export class Parser {
 
 	power(): ParseResult {
 		return this.binOp(
-			this.atom.bind(this),
+			this.fnCall.bind(this),
 			["POW"],
 			this.factor.bind(this)
 		);
+	}
+
+	fnCall(): ParseResult {
+		const res = new ParseResult();
+
+		const atom = res.register(this.atom());
+		if (res.error) return res;
+
+		if (this.current().type !== "LPAREN") {
+			return res.success(atom);
+		}
+
+		res.register(this.next());
+
+		const args: Node[] = [];
+
+		while (this.current().type !== "RPAREN") {
+			const arg = res.register(this.expr());
+			if (res.error) return res;
+
+			args.push(arg);
+
+			if (this.current().type === "COMMA") {
+				res.register(this.next());
+			} else if (this.current().type !== "RPAREN") {
+				return res.failure(
+					new SyntaxError(
+						this.current().posStart,
+						this.current().posEnd,
+						"Expected ',' or ')'"
+					)
+				);
+			}
+		}
+
+		res.register(this.next());
+
+		return res.success(new CallNode(atom, args));
 	}
 
 	atom() {
@@ -224,6 +264,13 @@ export class Parser {
 			if (res.error) return res;
 
 			return res.success(whileExpr);
+		}
+
+		if (token.matches("KEYWORD", "fn")) {
+			const fnExpr = res.register(this.fnExpr());
+			if (res.error) return res;
+
+			return res.success(fnExpr);
 		}
 
 		return res.failure(
@@ -400,6 +447,101 @@ export class Parser {
 		if (res.error) return res;
 
 		return res.success(new WhileNode(condition, body));
+	}
+
+	fnExpr() {
+		const res = new ParseResult();
+
+		if (!this.current().matches("KEYWORD", "fn")) {
+			return res.failure(
+				new SyntaxError(
+					this.current().posStart,
+					this.current().posEnd,
+					"Expected 'fn'"
+				)
+			);
+		}
+
+		res.register(this.next());
+
+		let name: Token | null = null;
+
+		if (this.current().type === "IDENTIFIER") {
+			name = this.current();
+			res.register(this.next());
+		}
+
+		if (this.current().type !== "LPAREN") {
+			return res.failure(
+				new SyntaxError(
+					this.current().posStart,
+					this.current().posEnd,
+					"Expected '('" + (name ? "" : " or IDENTIFIER")
+				)
+			);
+		}
+
+		res.register(this.next());
+
+		const parameters: Token[] = [];
+
+		while (this.current().type !== "RPAREN") {
+			if (this.current().type !== "IDENTIFIER") {
+				return res.failure(
+					new SyntaxError(
+						this.current().posStart,
+						this.current().posEnd,
+						"Expected IDENTIFIER"
+					)
+				);
+			}
+
+			const param = this.current();
+			parameters.push(param);
+
+			res.register(this.next());
+
+			if (this.current().type === "COMMA") {
+				res.register(this.next());
+			} else if (this.current().type !== "RPAREN") {
+				return res.failure(
+					new SyntaxError(
+						this.current().posStart,
+						this.current().posEnd,
+						"Expected ',' or ')'"
+					)
+				);
+			}
+		}
+
+		if (this.current().type !== "RPAREN") {
+			return res.failure(
+				new SyntaxError(
+					this.current().posStart,
+					this.current().posEnd,
+					"Expected ')'"
+				)
+			);
+		}
+
+		res.register(this.next());
+
+		if (!this.current().matches("KEYWORD", "do")) {
+			return res.failure(
+				new SyntaxError(
+					this.current().posStart,
+					this.current().posEnd,
+					"Expected 'do'"
+				)
+			);
+		}
+
+		res.register(this.next());
+
+		const body = res.register(this.expr());
+		if (res.error) return res;
+
+		return res.success(new FnDefNode(name, parameters, body));
 	}
 
 	private binOp(

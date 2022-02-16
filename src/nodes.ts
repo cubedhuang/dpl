@@ -9,7 +9,9 @@ export type Node =
 	| VarAssignNode
 	| IfNode
 	| ForNode
-	| WhileNode;
+	| WhileNode
+	| FnDefNode
+	| CallNode;
 export type NodeType = Node["type"];
 
 export abstract class BaseNode<Type extends NodeType = NodeType> {
@@ -113,5 +115,33 @@ export class WhileNode extends BaseNode<"WhileNode"> {
 
 	toString() {
 		return `(while ${this.condition} do ${this.body})`;
+	}
+}
+
+export class FnDefNode extends BaseNode<"FnDefNode"> {
+	constructor(
+		public name: Token | null,
+		public params: Token[],
+		public body: Node
+	) {
+		super("FnDefNode", (name ?? params[0] ?? body).posStart, body.posEnd);
+	}
+
+	toString() {
+		return `(fn ${this.name}(${this.params.join(", ")}) ${this.body})`;
+	}
+}
+
+export class CallNode extends BaseNode<"CallNode"> {
+	constructor(public fn: Node, public args: Node[]) {
+		super(
+			"CallNode",
+			fn.posStart,
+			args[args.length - 1]?.posEnd ?? fn.posEnd
+		);
+	}
+
+	toString() {
+		return `(${this.fn}(${this.args.join(", ")}))`;
 	}
 }

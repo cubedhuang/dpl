@@ -8,7 +8,8 @@ export const Keywords = [
 	"for",
 	"to",
 	"step",
-	"while"
+	"while",
+	"fn"
 ] as const;
 export type KeywordType = typeof Keywords[number];
 
@@ -20,6 +21,8 @@ export const Tokens = [
 	"ASSIGN",
 	"LPAREN",
 	"RPAREN",
+	"COMMA",
+	"ARROW",
 	// Types
 	"NONE",
 	"NUMBER",

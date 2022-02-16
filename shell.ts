@@ -1,5 +1,4 @@
-import "colors";
-
+import chalk from "chalk";
 import { createInterface } from "node:readline";
 
 import { execute } from "./src/execute";
@@ -18,13 +17,18 @@ function input(query: string) {
 async function start() {
 	while (true) {
 		console.log();
-		const code = await input("dpl> ".dim);
+		const code = await input(chalk.dim(`dpl> `));
+
 		if (code === "exit") process.exit();
+		if (code === "clear") {
+			console.clear();
+			continue;
+		}
 
 		const { value, error } = execute("<stdin>", code);
 
 		if (error) console.log(error.toString());
-		else console.log(value?.render().green);
+		else console.log(chalk.green(value?.render()));
 	}
 }
 

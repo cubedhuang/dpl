@@ -26,6 +26,8 @@ const tokenMap: TokenMatcher[] = [
 	{ regex: /^:/, type: "ASSIGN" },
 	{ regex: /^\(/, type: "LPAREN" },
 	{ regex: /^\)/, type: "RPAREN" },
+	{ regex: /^,/, type: "COMMA" },
+	{ regex: /^->/, type: "ARROW" },
 
 	{ regex: /^none\b/, type: "NONE" },
 	{ regex: /^\d+\.?\d*\b/, type: "NUMBER" },
