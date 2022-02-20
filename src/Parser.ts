@@ -6,6 +6,7 @@ import {
 	ForNode,
 	IfNode,
 	Node,
+	StatementsNode,
 	UnaryOpNode,
 	ValueNode,
 	VarAccessNode,
@@ -49,9 +50,13 @@ export class Parser {
 	constructor(public tokens: Token[]) {}
 
 	parse() {
-		const res = this.expr();
+		const res = this.statements();
 
-		if (!res.error && this.current().type !== "EOF") {
+		if (
+			!res.error &&
+			this.current().type !== "EOF" &&
+			this.current().type !== "SEMICOLON"
+		) {
 			return res.failure(
 				new SyntaxError(
 					this.current().posStart!,
@@ -69,6 +74,40 @@ export class Parser {
 	next() {
 		this.i++;
 		return this.current();
+	}
+
+	statements(): ParseResult {
+		const res = new ParseResult();
+		const statements: Node[] = [];
+
+		while (true) {
+			if (
+				this.current().type === "EOF" ||
+				this.current().type === "RBRACE"
+			) {
+				break;
+			}
+
+			const expr = this.expr();
+			if (expr.error) return expr;
+
+			statements.push(expr.node);
+
+			if (this.current().type === "SEMICOLON") {
+				res.register(this.next());
+			} else {
+				break;
+			}
+		}
+
+		return res.success(
+			new StatementsNode(
+				statements[0]?.posStart ?? this.current().posStart,
+				statements[statements.length - 1]?.posEnd ??
+					this.current().posEnd,
+				statements
+			)
+		);
 	}
 
 	expr(): ParseResult {
@@ -300,29 +339,63 @@ export class Parser {
 		const condition = res.register(this.expr());
 		if (res.error) return res;
 
-		if (!this.current().matches("KEYWORD", "do")) {
+		if (this.current().type !== "LBRACE") {
 			return res.failure(
 				new SyntaxError(
 					this.current().posStart,
 					this.current().posEnd,
-					"Expected 'do'"
+					"Expected '{'"
 				)
 			);
 		}
 
 		res.register(this.next());
 
-		const thenBranch = res.register(this.expr());
+		const thenBranch = res.register(this.statements());
 		if (res.error) return res;
 
-		if (!this.current().matches("KEYWORD", "else")) {
-			return res.success(new IfNode(condition, thenBranch)); // if (!this.current()Token.matches("KEYWORD", "else")) {
+		if (this.current().type !== "RBRACE") {
+			return res.failure(
+				new SyntaxError(
+					this.current().posStart,
+					this.current().posEnd,
+					"Expected '}'"
+				)
+			);
 		}
 
 		res.register(this.next());
 
-		const elseBranch = res.register(this.expr());
+		if (!this.current().matches("KEYWORD", "else")) {
+			return res.success(new IfNode(condition, thenBranch));
+		}
+
+		res.register(this.next());
+
+		if (this.current().type !== "LBRACE") {
+			return res.failure(
+				new SyntaxError(
+					this.current().posStart,
+					this.current().posEnd,
+					"Expected '{'"
+				)
+			);
+		}
+
+		res.register(this.next());
+
+		const elseBranch = res.register(this.statements());
 		if (res.error) return res;
+
+		if (this.current().type !== "RBRACE") {
+			return res.failure(
+				new SyntaxError(
+					this.current().posStart,
+					this.current().posEnd,
+					"Expected '}'"
+				)
+			);
+		}
 
 		return res.success(new IfNode(condition, thenBranch, elseBranch));
 	}
@@ -393,20 +466,32 @@ export class Parser {
 			if (res.error) return res;
 		}
 
-		if (!this.current().matches("KEYWORD", "do")) {
+		if (this.current().type !== "LBRACE") {
 			return res.failure(
 				new SyntaxError(
 					this.current().posStart,
 					this.current().posEnd,
-					"Expected 'do'"
+					"Expected '{'"
 				)
 			);
 		}
 
 		res.register(this.next());
 
-		const body = res.register(this.expr());
+		const body = res.register(this.statements());
 		if (res.error) return res;
+
+		if (this.current().type !== "RBRACE") {
+			return res.failure(
+				new SyntaxError(
+					this.current().posStart,
+					this.current().posEnd,
+					"Expected '}'"
+				)
+			);
+		}
+
+		res.register(this.next());
 
 		return res.success(
 			new ForNode(varName, startValue, endValue, stepValue, body)
@@ -431,20 +516,30 @@ export class Parser {
 		const condition = res.register(this.expr());
 		if (res.error) return res;
 
-		if (!this.current().matches("KEYWORD", "do")) {
+		if (this.current().type !== "LBRACE") {
 			return res.failure(
 				new SyntaxError(
 					this.current().posStart,
 					this.current().posEnd,
-					"Expected 'do'"
+					"Expected '{'"
 				)
 			);
 		}
 
 		res.register(this.next());
 
-		const body = res.register(this.expr());
+		const body = res.register(this.statements());
 		if (res.error) return res;
+
+		if (this.current().type !== "RBRACE") {
+			return res.failure(
+				new SyntaxError(
+					this.current().posStart,
+					this.current().posEnd,
+					"Expected '}'"
+				)
+			);
+		}
 
 		return res.success(new WhileNode(condition, body));
 	}
@@ -526,20 +621,33 @@ export class Parser {
 
 		res.register(this.next());
 
-		if (!this.current().matches("KEYWORD", "do")) {
+		// if (!this.current().matches("KEYWORD", "do")) {
+		if (this.current().type !== "LBRACE") {
 			return res.failure(
 				new SyntaxError(
 					this.current().posStart,
 					this.current().posEnd,
-					"Expected 'do'"
+					"Expected '{'"
 				)
 			);
 		}
 
 		res.register(this.next());
 
-		const body = res.register(this.expr());
+		const body = res.register(this.statements());
 		if (res.error) return res;
+
+		if (this.current().type !== "RBRACE") {
+			return res.failure(
+				new SyntaxError(
+					this.current().posStart,
+					this.current().posEnd,
+					"Expected '}'"
+				)
+			);
+		}
+
+		res.register(this.next());
 
 		return res.success(new FnDefNode(name, parameters, body));
 	}

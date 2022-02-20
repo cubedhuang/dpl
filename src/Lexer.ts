@@ -23,11 +23,14 @@ const tokenMap: TokenMatcher[] = [
 
 	{ regex: new RegExp(`^(?:${Keywords.join("|")})\\b`), type: "KEYWORD" },
 
-	{ regex: /^:/, type: "ASSIGN" },
+	{ regex: /^:=/, type: "ASSIGN" },
 	{ regex: /^\(/, type: "LPAREN" },
 	{ regex: /^\)/, type: "RPAREN" },
+	{ regex: /^{/, type: "LBRACE" },
+	{ regex: /^}/, type: "RBRACE" },
 	{ regex: /^,/, type: "COMMA" },
 	{ regex: /^->/, type: "ARROW" },
+	{ regex: /^;/, type: "SEMICOLON" },
 
 	{ regex: /^none\b/, type: "NONE" },
 	{ regex: /^\d+\.?\d*\b/, type: "NUMBER" },
@@ -66,7 +69,7 @@ const tokenMap: TokenMatcher[] = [
 	{ regex: /^</, type: "LT" },
 	{ regex: /^>=/, type: "GE" },
 	{ regex: /^>/, type: "GT" },
-	{ regex: /^=/, type: "EQ" },
+	{ regex: /^==/, type: "EQ" },
 	{ regex: /^!=/, type: "NEQ" },
 
 	{ regex: /^[a-zA-Z_][a-zA-Z0-9_]*/, type: "IDENTIFIER" }

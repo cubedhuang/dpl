@@ -2,6 +2,7 @@ import { Position } from "./Position";
 import { Token } from "./Token";
 
 export type Node =
+	| StatementsNode
 	| ValueNode
 	| UnaryOpNode
 	| BinaryOpNode
@@ -22,6 +23,20 @@ export abstract class BaseNode<Type extends NodeType = NodeType> {
 		public posStart: Position,
 		public posEnd: Position
 	) {}
+}
+
+export class StatementsNode extends BaseNode<"StatementsNode"> {
+	constructor(
+		posStart: Position,
+		posEnd: Position,
+		public statements: Node[]
+	) {
+		super("StatementsNode", posStart, posEnd);
+	}
+
+	toString() {
+		return this.statements.join("\n");
+	}
 }
 
 export class ValueNode extends BaseNode<"ValueNode"> {

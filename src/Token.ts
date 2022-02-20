@@ -21,8 +21,11 @@ export const Tokens = [
 	"ASSIGN",
 	"LPAREN",
 	"RPAREN",
+	"LBRACE",
+	"RBRACE",
 	"COMMA",
 	"ARROW",
+	"SEMICOLON",
 	// Types
 	"NONE",
 	"NUMBER",

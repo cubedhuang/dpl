@@ -1,0 +1,21 @@
+fn getString(n) {
+	set str := "";
+
+	if (n % 3 == 0) {
+		set str := str + "Fizz";
+	};
+
+	if (n % 5 == 0) {
+		set str := str + "Buzz";
+	};
+
+	if (str == "") {
+		set str := n;
+	};
+
+	str;
+};
+
+for i := 1 to 100 {
+	print(getString(i));
+};

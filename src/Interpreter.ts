@@ -7,6 +7,7 @@ import {
 	ForNode,
 	IfNode,
 	Node,
+	StatementsNode,
 	UnaryOpNode,
 	ValueNode,
 	VarAccessNode,
@@ -45,6 +46,8 @@ class RuntimeResult<Type extends DPLValue> {
 export class Interpreter {
 	visit(node: Node, context: Context): RuntimeResult<DPLValue> {
 		switch (node.type) {
+			case "StatementsNode":
+				return this.visitStatementsNode(node, context);
 			case "ValueNode":
 				return this.visitValueNode(node, context);
 			case "UnaryOpNode":
@@ -68,6 +71,23 @@ export class Interpreter {
 		}
 		// @ts-ignore
 		throw new Error(`Unknown node type ${node.type}`);
+	}
+
+	visitStatementsNode(node: StatementsNode, context: Context) {
+		const res = new RuntimeResult();
+
+		let lastValue: DPLValue = new DPLNone()
+			.setPos(node.posStart, node.posEnd)
+			.setContext(context);
+
+		for (const statement of node.statements) {
+			const value = res.register(this.visit(statement, context));
+			if (res.error) return res;
+
+			lastValue = value;
+		}
+
+		return res.success(lastValue);
 	}
 
 	visitValueNode(node: ValueNode, context: Context) {
@@ -321,6 +341,6 @@ export class Interpreter {
 
 		const [result, error] = fn.call(args);
 		if (error) return res.failure(error);
-		return res.success(result!);
+		return res.success(result!.setPos(node.posStart, node.posEnd));
 	}
 }

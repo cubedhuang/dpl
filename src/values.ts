@@ -5,8 +5,15 @@ import { Node } from "./nodes";
 import { Position } from "./Position";
 import { SymbolTable } from "./SymbolTable";
 import { TokenType } from "./Token";
+import readlineSync from "readline-sync";
 
-export type DPLValue = DPLNone | DPLNumber | DPLBool | DPLString | DPLFunction;
+export type DPLValue =
+	| DPLNone
+	| DPLNumber
+	| DPLBool
+	| DPLString
+	| DPLFunction
+	| DPLBuiltInFunction;
 export type DPLType = DPLValue["type"];
 
 type Ops<Args extends unknown[] = []> = {
@@ -458,16 +465,10 @@ export class DPLString extends BaseDPLValue<"STRING", string> {
 	}
 }
 
-export class DPLFunction extends BaseDPLValue<"FN", null> {
-	readonly interpreter = new Interpreter();
-
+abstract class BaseDPLFunction extends BaseDPLValue<"FN", null> {
 	readonly name: string;
 
-	constructor(
-		name: string | null,
-		public readonly body: Node,
-		public readonly params: string[]
-	) {
+	constructor(name: string | null) {
 		super("FN", null);
 
 		this.name = name ?? "<anonymous>";
@@ -490,26 +491,54 @@ export class DPLFunction extends BaseDPLValue<"FN", null> {
 		];
 	}
 
-	call(args: DPLValue[]): [DPLValue, null] | [null, RuntimeError] {
+	generateContext() {
 		const context = new Context(this.name, this.context, this.posStart);
 		context.symbolTable = new SymbolTable(context.parent!.symbolTable);
+		return context;
+	}
 
-		if (args.length !== this.params.length) {
-			return [
-				null,
-				new RuntimeError(
-					this.posStart!,
-					this.posEnd!,
-					`Expected ${this.params.length} arguments but got ${args.length}`,
-					this.context!
-				)
-			];
+	checkArgs(names: string[], args: DPLValue[]) {
+		if (args.length !== names.length) {
+			return new RuntimeError(
+				this.posStart!,
+				this.posEnd!,
+				`Expected ${names.length} arguments but got ${args.length}`,
+				this.context!
+			);
 		}
 
+		return null;
+	}
+
+	populateArgs(names: string[], args: DPLValue[], context: Context) {
 		for (let i = 0; i < args.length; i++) {
-			args[i].setContext(context);
-			context.symbolTable.set(this.params[i], args[i]);
+			context.symbolTable.set(names[i], args[i].setContext(context));
 		}
+	}
+
+	handleArgs(names: string[], args: DPLValue[], context: Context) {
+		const error = this.checkArgs(names, args);
+		if (error) return error;
+		this.populateArgs(names, args, context);
+	}
+}
+
+export class DPLFunction extends BaseDPLFunction {
+	readonly interpreter = new Interpreter();
+
+	constructor(
+		name: string | null,
+		public readonly body: Node,
+		public readonly params: string[]
+	) {
+		super(name);
+	}
+
+	call(args: DPLValue[]): [DPLValue, null] | [null, RuntimeError] {
+		const context = this.generateContext();
+
+		const argError = this.handleArgs(this.params, args, context);
+		if (argError) return [null, argError];
 
 		const { value, error } = this.interpreter.visit(this.body, context);
 
@@ -525,5 +554,59 @@ export class DPLFunction extends BaseDPLValue<"FN", null> {
 
 	toString() {
 		return `<function ${this.name}>`;
+	}
+}
+
+export class DPLBuiltInFunction extends BaseDPLFunction {
+	call(args: DPLValue[]): [DPLValue, null] | [null, RuntimeError] {
+		const context = this.generateContext();
+
+		switch (this.name) {
+			case "print":
+				return this.callPrint(args, context);
+			case "prompt":
+				return this.callPrint(args, context);
+		}
+
+		return [
+			null,
+			new RuntimeError(
+				this.posStart!,
+				this.posEnd!,
+				`Undefined BuiltInFunction: ${this.name}`,
+				this.context!
+			)
+		];
+	}
+
+	callPrint(
+		args: DPLValue[],
+		context: Context
+	): [DPLValue, null] | [null, RuntimeError] {
+		this.handleArgs(["value"], args, context);
+
+		const value = context.symbolTable.get("value")!;
+		console.log(value.toString());
+
+		return [value, null];
+	}
+
+	callPrompt(args: DPLValue[], context: Context) {
+		this.handleArgs(["value"], args, context);
+
+		const value = context.symbolTable.get("value")!;
+		const answer = readlineSync.question(value.toString());
+
+		return [new DPLString(answer), null];
+	}
+
+	copy(): DPLBuiltInFunction {
+		return new DPLBuiltInFunction(this.name)
+			.setPos(this.posStart, this.posEnd)
+			.setContext(this.context);
+	}
+
+	toString() {
+		return `<built-in function ${this.name}>`;
 	}
 }
