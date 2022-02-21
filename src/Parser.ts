@@ -43,10 +43,6 @@ export class ParseResult {
 export class Parser {
 	i = 0;
 
-	current() {
-		return this.tokens[this.i];
-	}
-
 	constructor(public tokens: Token[]) {}
 
 	parse() {
@@ -71,9 +67,17 @@ export class Parser {
 		return res;
 	}
 
+	current() {
+		return this.tokens[this.i];
+	}
+
 	next() {
 		this.i++;
 		return this.current();
+	}
+
+	peek() {
+		return this.tokens[this.i + 1];
 	}
 
 	statements(): ParseResult {
@@ -113,19 +117,10 @@ export class Parser {
 	expr(): ParseResult {
 		const res = new ParseResult();
 
-		if (this.current().matches("KEYWORD", "set")) {
-			res.register(this.next());
-
-			if (this.current().type !== "IDENTIFIER") {
-				return res.failure(
-					new SyntaxError(
-						this.current().posStart,
-						this.current().posEnd,
-						"Expected IDENTIFIER"
-					)
-				);
-			}
-
+		if (
+			this.current().type === "IDENTIFIER" &&
+			this.peek().type === "ASSIGN"
+		) {
 			const identifier = this.current();
 
 			res.register(this.next());
@@ -135,7 +130,7 @@ export class Parser {
 					new SyntaxError(
 						this.current().posStart,
 						this.current().posEnd,
-						"Expected ':'"
+						"Expected ':='"
 					)
 				);
 			}

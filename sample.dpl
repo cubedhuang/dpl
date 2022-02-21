@@ -1,16 +1,18 @@
+// sample fizzbuzz program
+
 fn getString(n) {
-	set str := "";
+	str := "";
 
 	if (n % 3 == 0) {
-		set str := str + "Fizz";
+		str := str + "Fizz";
 	};
 
 	if (n % 5 == 0) {
-		set str := str + "Buzz";
+		str := str + "Buzz";
 	};
 
 	if (str == "") {
-		set str := n;
+		str := n;
 	};
 
 	str;

@@ -1,7 +1,6 @@
 import { Position } from "./Position";
 
 export const Keywords = [
-	"set",
 	"if",
 	"do",
 	"else",

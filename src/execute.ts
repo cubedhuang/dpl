@@ -16,13 +16,11 @@ export function execute(file: string, input: string) {
 	const { tokens, error: lexError } = lexer.getTokens();
 
 	if (lexError) return { value: null, error: lexError };
-	console.log(tokens.toString());
 
 	const parser = new Parser(tokens);
 	const { node: ast, error: parseError } = parser.parse();
 
-	if (parseError) return { error: parseError };
-	console.log(ast.toString());
+	if (parseError) return { value: null, error: parseError };
 
 	const interpreter = new Interpreter();
 	const context = new Context("<program>");

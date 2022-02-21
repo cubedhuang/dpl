@@ -1,6 +1,6 @@
 statements : expr (SEMI statements)? SEMI?
 
-expr       : KEYWORD:set IDENTIFIER ASSIGN expr
+expr       : IDENTIFIER ASSIGN expr
            : comp-expr (comp-op comp-expr)*
 
 comp-expr  : KEYWORD:not comp-expr
